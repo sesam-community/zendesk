@@ -1,4 +1,5 @@
-requests==2.22.0
+requests
 flask
 cherrypy
 sesamutils
+Paste
