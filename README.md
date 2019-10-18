@@ -12,6 +12,7 @@ It can be used to import  Tickets, Users, Groups...etc.
   "docker": {
     "environment": {
       "LOG_LEVEL": "INFO",
+      "zendeskSubdomain": "<Your subdomain at Zendesk>",
       "token": "<Token to access zendesk (Visit https://<yourdomain>.zendesk.com/agent/admin/api/settings to get it)>",
       "user": "your email-id of zendsek-login"
     },

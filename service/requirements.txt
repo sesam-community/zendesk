@@ -1,5 +1,5 @@
 requests
 flask
-cherrypy
+cherrypy==18.2.0 # latest version incompatable with sesamutils 2019-17-10
 sesamutils
 Paste

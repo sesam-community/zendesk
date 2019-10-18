@@ -16,14 +16,14 @@ app = app = Flask(__name__)
 logger = logging.getLogger("zendesk-service")
 
 # Default
-required_env_vars = ["user", "token"]
-optional_env_vars = [("LOG_LEVEL", "INFO")]
+required_env_vars = ["user", "token","zendeskSubdomain"]
+optional_env_vars = [("LOG_LEVEL", "INFO")] 
 config = VariablesConfig(required_env_vars, optional_env_vars=optional_env_vars)
 if not config.validate():
     sys.exit(1)
 
 
-@app.route('/tickets')
+@app.route('/tickets') 
 def get_tickets():
     try:
         if request.args.get('since') is None:
@@ -36,7 +36,7 @@ def get_tickets():
             session.auth = (config.user+'/token', config.token)
             check_items = True
             ticket_list = list()
-            url = f'https://sesam.zendesk.com/api/v2/incremental/tickets.json?start_time={unix_time_update_date}'
+            url = f'https://{zendeskSubdomain}.zendesk.com/api/v2/incremental/tickets.json?start_time={unix_time_update_date}'
             while check_items:
                 response = session.get(url, timeout=180)
                 data = response.json()
@@ -60,7 +60,7 @@ def get_items(items):
     try:
         with requests.Session() as session:
             session.auth = (config.user+'/token', config.token)
-            url = f'https://sesam.zendesk.com/api/v2/{items}.json'
+            url = f'https://{zendeskSubdomain}.zendesk.com/api/v2/{items}.json'
             response = session.get(url, timeout=180)
             data = response.json()
             result = list()
