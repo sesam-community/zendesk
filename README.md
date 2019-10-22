@@ -30,7 +30,7 @@ It can be used to import  Tickets, Users, Groups...etc.
   "type": "pipe",
   "source": {
     "type": "json",
-    "system": "<name of your system>",
+    "system": "<name of your system i.e zendesk>",
     "is_chronological": true,
     "is_since_comparable": false,
     "supports_since": true,
@@ -55,7 +55,7 @@ It can be used to import  Tickets, Users, Groups...etc.
   "type": "pipe",
   "source": {
     "type": "json",
-    "system": "<name of your system>",
+    "system": "<name of your system i.e zendesk>",
     "url": "/items/<users or groups or  requests ...etc depending what kind of list, you want.>"
   },
   "transform": {
