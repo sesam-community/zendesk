@@ -3,3 +3,4 @@ flask
 cherrypy
 sesamutils
 Paste
+python-dateutil
