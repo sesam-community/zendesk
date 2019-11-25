@@ -1,0 +1,22 @@
+version: '3'
+services:
+  zendesk-service:
+    build: .
+    image: mofsesam/zendesk-service:latest
+    ports:
+      - "5000:5000"
+    environment:
+      DEBUG: "True"
+      DUMMY_URL: http://dummy-zen:5000  
+      LOG_LEVEL: "DEBUG"
+      USER: "mofsesam"
+      TOKEN: "bearer something"
+      SUBDOMAIN: "sesam"
+  dummy-zen:
+    image: mofsesam/norwegianblue:latest
+    ports:
+      - "5001:5000"
+    environment:
+      DEBUG: "True"
+      SUBDOMAIN: "sesam"
+      LOG_LEVEL: "DEBUG" 

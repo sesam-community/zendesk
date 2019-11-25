@@ -1,5 +1,12 @@
-*idea*
-*.zip
-*env*
-*venv*
-.vscode
+.vscode/settings.json
+__pycache__/
+*.py[cod]
+*.code-workspace
+.DS_STORE
+.idea
+*.*~
+.syncconfig
+dev-env.json
+~$*.xlsx
+
+

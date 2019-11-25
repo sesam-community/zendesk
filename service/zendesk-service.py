@@ -1,30 +1,44 @@
-import requests
-import cherrypy
-import json
-import logging
-from flask import Flask, request, Response, abort
-from requests.exceptions import Timeout
-from sesamutils import VariablesConfig
-import paste.translogger
-
-
-import sys
 import os
+from datetime import datetime
 
-app = app = Flask(__name__)
+import json
 
-logger = logging.getLogger("zendesk-service")
+from flask import Flask, request, jsonify, Response, abort
 
-# Default
-required_env_vars = ["user", "token","zendeskSubdomain"]
-optional_env_vars = [("LOG_LEVEL", "INFO","ZENDESK_API_ROOT")] 
+import requests
+from requests.exceptions import Timeout
+
+from sesamutils import sesam_logger, VariablesConfig
+from sesamutils.flask import serve
+
+from collections import OrderedDict
+
+app = Flask(__name__)
+logger = sesam_logger('zendesk-service', app=app, timestamp=True)
+
+# Default values can be given to optional environment variables by the use of tuples
+required_env_vars = ["USER", "TOKEN","SUBDOMAIN"]
+optional_env_vars = [("DEBUG","false"),("LOG_LEVEL", "INFO"),"DUMMY_URL"] 
 config = VariablesConfig(required_env_vars, optional_env_vars=optional_env_vars)
+    
 if not config.validate():
-    sys.exit(1)
+    logger.error("Environment variables do not validate. Exiting system.")
+    os.sys.exit(1)
 
-if not hasattr(config,"ZENDESK_API_ROOT"):
-    setattr(config,'ZENDESK_API_ROOT', 'zendesk.com/api/v2/')
+USER = config.USER
+TOKEN = config.TOKEN
+SUBDOMAIN = config.SUBDOMAIN
 
+DEBUG = config.DEBUG in ["true","True","yes"]
+
+if hasattr(config, 'DUMMY_URL'):
+    ZENURL = config.DUMMY_URL
+    if (ZENURL[-1] == '/'): 
+        ZENURL = ZENURL[:-1]
+    logger.info(f"Using DUMMY_URL {ZENURL} for Zendesk-api-base-url")
+else: 
+    ZENURL = f'https://{SUBDOMAIN}.zendesk.com/api/v2'
+    logger.info("Using {ZENURL} for Zendesk-api-base-url") 
 
 @app.route('/tickets') 
 def get_tickets():
@@ -36,10 +50,10 @@ def get_tickets():
             unix_time_update_date = request.args.get('since')
             logger.debug(f"since value sent from sesam: {unix_time_update_date}")
         with requests.Session() as session:
-            session.auth = (config.user+'/token', config.token)
+            session.auth = (USER+'/token', TOKEN)
             check_items = True
             ticket_list = list()
-            url = f'https://{config.zendeskSubdomain}.{config.ZENDESK_API_ROOT}incremental/tickets.json?start_time={unix_time_update_date}'
+            url = f'{ZENURL}/incremental/tickets.json?start_time={unix_time_update_date}'
             while check_items:
                 response = session.get(url, timeout=180)
                 data = response.json()
@@ -57,30 +71,30 @@ def get_tickets():
     except Exception as e:
         logger.error(f"Issue while fetching tickets from Zendesk {e}")
 
-@app.route('/ticket/update/<ticketID>') 
+@app.route('/transform/update/ticket/<ticketID>',methods=['POST']) 
 def update_ticket(ticketID):
     try:
-        if request.method != "PUT":
-            abort(405)
         with requests.Session() as session:
-            session.auth = (config.user+'/token', config.token)
-            url = f'https://{config.zendeskSubdomain}.{config.ZENDESK_API_ROOT}tickets/{ticketID}.json' 
-            response = session.put(url, data=request.get_data(), timeout=180)
-            return Response(response.content, mimetype=response.content_type)
+            session.auth = (USER+'/token', TOKEN)
+            url = f'{ZENURL}/tickets/{ticketID}.json' 
+            if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
+            response = session.put(url, json=request.get_json(), timeout=180)
+            if DEBUG: logger.debug("Output payload: "+str(response.json()))
+            return jsonify(response.json())
     except Timeout as e:
-        logger.error(f"Timeout issue while fetching tickets {e}")
+        logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
     except ConnectionError as e:
-        logger.error(f"ConnectionError issue while fetching tickets{e}")
+        logger.error(f"ConnectionError issue while updating ticket {ticketID}: {e}")
     except Exception as e:
-        logger.error(f"Issue while fetching tickets from Zendesk {e}")
+        logger.error(f"Issue while updating ticket {ticketID} from Zendesk: {e}")
 
 
-@app.route('/items/<items>')
+@app.route('/items/<path:items>')
 def get_items(items):
     try:
         with requests.Session() as session:
-            session.auth = (config.user+'/token', config.token)
-            url = f'https://{zendeskSubdomain}.{config.ZENDESK_API_ROOT}{items}.json'
+            session.auth = (USER+'/token', TOKEN)
+            url = f'{ZENURL}/{items}.json'
             response = session.get(url, timeout=180)
             data = response.json()
             result = list()
@@ -96,31 +110,5 @@ def get_items(items):
         logger.error(f"Issue while fetching {items} from Zendesk {e}")
 
 
-if __name__ == '__main__':
-    format_string = '%(name)s - %(levelname)s - %(message)s'
-    # Log to stdout, change to or add a (Rotating)FileHandler to log to a file
-    stdout_handler = logging.StreamHandler()
-    stdout_handler.setFormatter(logging.Formatter(format_string))
-    logger.addHandler(stdout_handler)
-
-    # Comment these two lines if you don't want access request logging
-    app.wsgi_app = paste.translogger.TransLogger(app.wsgi_app, logger_name=logger.name,
-                                                 setup_console_handler=False)
-    app.logger.addHandler(stdout_handler)
-
-    logger.propagate = False
-    log_level = logging.getLevelName(os.environ.get('LOG_LEVEL', 'INFO'))  # default log level = INFO
-    logger.setLevel(level=log_level)
-    cherrypy.tree.graft(app, '/')
-    # Set the configuration of the web server to production mode
-    cherrypy.config.update({
-        'environment': 'production',
-        'engine.autoreload_on': False,
-        'log.screen': True,
-        'server.socket_port': 5000,
-        'server.socket_host': '0.0.0.0'
-    })
-
-    # Start the CherryPy WSGI web server
-    cherrypy.engine.start()
-    cherrypy.engine.block()
+if __name__ == "__main__":
+    serve(app)

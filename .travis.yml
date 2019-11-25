@@ -1,14 +1,11 @@
 sudo: required
 
-
-language: python
-python:
-  -  "3.5"
-
 services:
   - docker
 
-script: true
+script:
+  - docker-compose build
+  - docker-compose run --rm zendesk-service pytest
 
-after_success:
-  - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)
+# after_success:
+#   - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)
