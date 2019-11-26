@@ -28,19 +28,32 @@ if not config.validate():
 USER = config.USER
 TOKEN = config.TOKEN
 SUBDOMAIN = config.SUBDOMAIN
+DUMMY_URL = False
 
 DEBUG = config.DEBUG in ["true","True","yes"]
 
 if hasattr(config, 'DUMMY_URL'):
-    ZENURL = config.DUMMY_URL
+    DUMMY_URL = config.DUMMY_URL 
+    ZENURL = DUMMY_URL
     if (ZENURL[-1] == '/'): 
         ZENURL = ZENURL[:-1]
     logger.info(f"Using DUMMY_URL {ZENURL} for Zendesk-api-base-url")
 else: 
     ZENURL = f'https://{SUBDOMAIN}.zendesk.com/api/v2'
-    logger.info("Using {ZENURL} for Zendesk-api-base-url") 
+    logger.info("Using {ZENURL} for Zendesk-api-base-url")
 
-@app.route('/tickets') 
+# def stream_as_json(generator_function):
+#     first = True
+#     yield ‘[’
+#     for item in generator_function:
+#         if not first:
+#             yield ‘,’
+#         else:
+#             first = False
+#         yield json.dumps(item)
+#     yield ‘]’ 
+
+@app.route('/source/ticket/all',methods=["GET"]) 
 def get_tickets():
     try:
         if request.args.get('since') is None:
@@ -63,7 +76,8 @@ def get_tickets():
                     check_items = False
             result = [dict(item, _updated=data['end_time'], _id=str(item['id'])) for item in
                       ticket_list]
-            return Response(json.dumps(result), mimetype='application/json')
+            return Response(json.dumps(result), mimetype='application/json') #Rewrite to use stream_as_json
+            # return Response(stream_as_json(get_page(url)), mimetype=‘application/json’)
     except Timeout as e:
         logger.error(f"Timeout issue while fetching tickets {e}")
     except ConnectionError as e:
@@ -71,12 +85,29 @@ def get_tickets():
     except Exception as e:
         logger.error(f"Issue while fetching tickets from Zendesk {e}")
 
-@app.route('/transform/update/ticket/<ticketID>',methods=['POST']) 
+@app.route('/transform/ticket/update/<ticketID>',methods=['POST']) 
 def update_ticket(ticketID):
     try:
         with requests.Session() as session:
             session.auth = (USER+'/token', TOKEN)
             url = f'{ZENURL}/tickets/{ticketID}.json' 
+            if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
+            response = session.put(url, json=request.get_json(), timeout=180)
+            if DEBUG: logger.debug("Output payload: "+str(response.json()))
+            return jsonify(response.json())
+    except Timeout as e:
+        logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
+    except ConnectionError as e:
+        logger.error(f"ConnectionError issue while updating ticket {ticketID}: {e}")
+    except Exception as e:
+        logger.error(f"Issue while updating ticket {ticketID} from Zendesk: {e}")
+
+@app.route('/transform/ticket/new/',methods=['POST']) 
+def new_ticket():
+    try:
+        with requests.Session() as session:
+            session.auth = (USER+'/token', TOKEN)
+            url = f'{ZENURL}/ticket' 
             if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
             response = session.put(url, json=request.get_json(), timeout=180)
             if DEBUG: logger.debug("Output payload: "+str(response.json()))
