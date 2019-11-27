@@ -13,4 +13,4 @@ WORKDIR /service/
 EXPOSE 5000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["python3", "zendesk-service.py"]
+CMD ["python3", "zendesk.py"]

@@ -14,7 +14,7 @@ from sesamutils.flask import serve
 from collections import OrderedDict
 
 app = Flask(__name__)
-logger = sesam_logger('zendesk-service', app=app, timestamp=True)
+logger = sesam_logger('zendesk', app=app, timestamp=True)
 
 # Default values can be given to optional environment variables by the use of tuples
 required_env_vars = ["USER", "TOKEN","SUBDOMAIN"]
@@ -90,6 +90,7 @@ def update_ticket(ticketID):
     try:
         with requests.Session() as session:
             session.auth = (USER+'/token', TOKEN)
+            # '{"ticket": {"subject": "My printer is on fire!", "comment": { "body": "The smoke is very colorful." }}}
             url = f'{ZENURL}/tickets/{ticketID}.json' 
             if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
             response = session.put(url, json=request.get_json(), timeout=180)
@@ -104,13 +105,28 @@ def update_ticket(ticketID):
 
 @app.route('/transform/ticket/new/',methods=['POST']) 
 def new_ticket():
+    if request.is_json:
+        ticket_list = request.get_json()
+        logger.debug(type(ticket_list))
+    else:
+        logger.error('Content type must be json and not:'+str(request.content_type))
+        abort(415)
+      # Check format of ticket_data e.g. {"ticket": {"subject": "My printer is on fire!", "comment": { "body": "The smoke is very colorful." }}}
+    ticket_data = ticket_list[0] # Debug/testing single element
+    if 'ticket' in ticket_data.keys() and 'comment' in ticket_data['ticket'].keys():
+        pass
+    else:
+        logger.error('Paylod not in correct format. Comment is mandatory.')
+        abort(400)
     try:
         with requests.Session() as session:
             session.auth = (USER+'/token', TOKEN)
-            url = f'{ZENURL}/ticket' 
-            if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
-            response = session.put(url, json=request.get_json(), timeout=180)
+            url = f'{ZENURL}/tickets.json'
+            if DEBUG: logger.debug("Input payload: "+str(ticket_data))
+            response = session.post(url, json=ticket_data, timeout=180)
             if DEBUG: logger.debug("Output payload: "+str(response.json()))
+            # Status should be 201 Created
+            logger.info("Statuscode from Zendesk: "+str(response.status_code))
             return jsonify(response.json())
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
