@@ -27,6 +27,7 @@ if not config.validate():
 
 USER = config.USER
 TOKEN = config.TOKEN
+ZEN_AUTH = (USER+'/token', TOKEN)
 SUBDOMAIN = config.SUBDOMAIN
 DUMMY_URL = False
 
@@ -40,7 +41,7 @@ if hasattr(config, 'DUMMY_URL'):
     logger.info(f"Using DUMMY_URL {ZENURL} for Zendesk-api-base-url")
 else: 
     ZENURL = f'https://{SUBDOMAIN}.zendesk.com/api/v2'
-    logger.info("Using {ZENURL} for Zendesk-api-base-url")
+    logger.info(f"Using {ZENURL} for Zendesk-api-base-url")
 
 # def stream_as_json(generator_function):
 #     first = True
@@ -63,10 +64,11 @@ def get_tickets():
             unix_time_update_date = request.args.get('since')
             logger.debug(f"since value sent from sesam: {unix_time_update_date}")
         with requests.Session() as session:
-            session.auth = (USER+'/token', TOKEN)
+            session.auth = ZEN_AUTH
             check_items = True
             ticket_list = list()
             url = f'{ZENURL}/incremental/tickets.json?start_time={unix_time_update_date}'
+            # https://developer.zendesk.com/rest_api/docs/support/tickets#list-tickets
             while check_items:
                 response = session.get(url, timeout=180)
                 data = response.json()
@@ -76,7 +78,7 @@ def get_tickets():
                     check_items = False
             result = [dict(item, _updated=data['end_time'], _id=str(item['id'])) for item in
                       ticket_list]
-            return Response(json.dumps(result), mimetype='application/json') #Rewrite to use stream_as_json
+            return Response(json.dumps(result), mimetype='application/json; charset=utf-8') #Rewrite to use stream_as_json
             # return Response(stream_as_json(get_page(url)), mimetype=‘application/json’)
     except Timeout as e:
         logger.error(f"Timeout issue while fetching tickets {e}")
@@ -85,17 +87,35 @@ def get_tickets():
     except Exception as e:
         logger.error(f"Issue while fetching tickets from Zendesk {e}")
 
-@app.route('/transform/ticket/update/<ticketID>',methods=['POST']) 
-def update_ticket(ticketID):
+@app.route('/transform/ticket/update/',methods=['POST']) 
+def update_ticket():
+    if request.is_json:
+        ticket_list = request.get_json()
+        logger.debug(type(ticket_list))
+    else:
+        logger.error('Content type must be json and not:'+str(request.content_type))
+        abort(415)
+    ticket_data = ticket_list[0] # only support single element
+    if 'ticket' in ticket_data.keys() and 'id' in ticket_data['ticket'].keys():
+        id = ticket_data['ticket'].pop('id')
+        ticket = {"ticket": ticket_data['ticket']}
+    else:
+        logger.error('Paylod not in correct format. id is mandatory to update.')
+        abort(400)
     try:
         with requests.Session() as session:
-            session.auth = (USER+'/token', TOKEN)
-            # '{"ticket": {"subject": "My printer is on fire!", "comment": { "body": "The smoke is very colorful." }}}
-            url = f'{ZENURL}/tickets/{ticketID}.json' 
-            if DEBUG: logger.debug("Input payload: "+str(request.get_json()))
-            response = session.put(url, json=request.get_json(), timeout=180)
+            session.auth = ZEN_AUTH
+            url = f'{ZENURL}/tickets/{id}.json'
+            # https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket
+            if DEBUG: logger.debug("Input payload: "+str(ticket))
+            response = session.put(url, json=ticket, timeout=180)
             if DEBUG: logger.debug("Output payload: "+str(response.json()))
-            return jsonify(response.json())
+            # Status should be 201 Created
+            logger.info("Statuscode from Zendesk: "+str(response.status_code))
+            result = response.json()
+            if not isinstance(result,list):
+                result = [result]
+            return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
     except ConnectionError as e:
@@ -111,50 +131,32 @@ def new_ticket():
     else:
         logger.error('Content type must be json and not:'+str(request.content_type))
         abort(415)
-      # Check format of ticket_data e.g. {"ticket": {"subject": "My printer is on fire!", "comment": { "body": "The smoke is very colorful." }}}
     ticket_data = ticket_list[0] # Debug/testing single element
     if 'ticket' in ticket_data.keys() and 'comment' in ticket_data['ticket'].keys():
-        pass
+        ticket = {"ticket": ticket_data['ticket']}
     else:
         logger.error('Paylod not in correct format. Comment is mandatory.')
         abort(400)
     try:
         with requests.Session() as session:
-            session.auth = (USER+'/token', TOKEN)
+            session.auth = ZEN_AUTH
             url = f'{ZENURL}/tickets.json'
-            if DEBUG: logger.debug("Input payload: "+str(ticket_data))
-            response = session.post(url, json=ticket_data, timeout=180)
+            # https://developer.zendesk.com/rest_api/docs/support/tickets#create-ticket
+            if DEBUG: logger.debug("Input payload: "+str(ticket))
+            response = session.post(url, json=ticket, timeout=180)
             if DEBUG: logger.debug("Output payload: "+str(response.json()))
             # Status should be 201 Created
             logger.info("Statuscode from Zendesk: "+str(response.status_code))
-            return jsonify(response.json())
+            result = response.json()
+            if not isinstance(result,list):
+                result = [result]
+            return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
     except ConnectionError as e:
         logger.error(f"ConnectionError issue while updating ticket {ticketID}: {e}")
     except Exception as e:
         logger.error(f"Issue while updating ticket {ticketID} from Zendesk: {e}")
-
-
-@app.route('/items/<path:items>')
-def get_items(items):
-    try:
-        with requests.Session() as session:
-            session.auth = (USER+'/token', TOKEN)
-            url = f'{ZENURL}/{items}.json'
-            response = session.get(url, timeout=180)
-            data = response.json()
-            result = list()
-            if data is not None:
-                data = data[items]
-                result = [dict(item, _id=str(item['id'])) for item in data]
-            return Response(json.dumps(result), mimetype='application/json')
-    except Timeout as e:
-        logger.error(f"Timeout issue while fetching {items} {e}")
-    except ConnectionError as e:
-        logger.error(f"ConnectionError issue while fetching {items}{e}")
-    except Exception as e:
-        logger.error(f"Issue while fetching {items} from Zendesk {e}")
 
 
 if __name__ == "__main__":
