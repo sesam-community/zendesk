@@ -1,7 +1,7 @@
 # safelist
 branches:
   only:
-  - master
+  # - master
   - develop
 
 sudo: required
