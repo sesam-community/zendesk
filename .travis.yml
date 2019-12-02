@@ -17,5 +17,6 @@ script:
   - docker-compose down
   
 
-# after_success:
+after_success:
+  - bash docker_compose_push.sh
 #   - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)

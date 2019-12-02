@@ -2,7 +2,7 @@ version: '3'
 services:
   zendesk-service:
     build: .
-    image: mofsesam/zendesk-service:latest
+    image: mofsesam/zendesk-service:develop
     ports:
       - "5000:5000"
     environment: &env
