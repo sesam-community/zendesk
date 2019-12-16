@@ -14,7 +14,7 @@ def test_new_ticket():
     echo = echo[0]
     echo_payload = echo['payload']
     assert isinstance(echo_payload,dict)
-    assert json.dumps([echo_payload]) == payload
+    assert echo_payload["ticket"]['comment']['body'] == payload[0]["ticket"]['comment']['body']
     assert echo['content_type'] == 'application/json'
 
 def test_update_ticket():
@@ -30,7 +30,7 @@ def test_update_ticket():
     echo = echo[0]
     echo_payload = echo['payload']
     assert isinstance(echo_payload,dict)
-    assert json.dumps([echo_payload]) == payload
+    assert echo_payload["ticket"]['comment']['body'] == payload[0]["ticket"]['comment']['body']
     assert echo['content_type'] == 'application/json'
 
 
