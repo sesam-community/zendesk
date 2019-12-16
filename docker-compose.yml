@@ -22,7 +22,7 @@ services:
       LOG_LEVEL: "DEBUG" 
   zendesk-service-test:
     container_name: zendesk-service-test
-    image: mofsesam/zendesk-service:latest
+    image: mofsesam/zendesk-service:develop
     depends_on:
       - zendesk-service
       - dummy-zen
