@@ -2,7 +2,7 @@ version: '3'
 services:
   zendesk-service:
     build: .
-    image: mofsesam/zendesk-service:develop
+    image: mofsesam/zendesk-service:developgetticket
     ports:
       - "5000:5000"
     environment: &env
@@ -22,7 +22,7 @@ services:
       LOG_LEVEL: "DEBUG" 
   zendesk-service-test:
     container_name: zendesk-service-test
-    image: mofsesam/zendesk-service:develop
+    image: mofsesam/zendesk-service:developgetticket
     depends_on:
       - zendesk-service
       - dummy-zen

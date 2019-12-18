@@ -43,16 +43,17 @@ else:
     ZENURL = f'https://{SUBDOMAIN}.zendesk.com/api/v2'
     logger.info(f"Using {ZENURL} for Zendesk-api-base-url")
 
-# def stream_as_json(generator_function):
-#     first = True
-#     yield ‘[’
-#     for item in generator_function:
-#         if not first:
-#             yield ‘,’
-#         else:
-#             first = False
-#         yield json.dumps(item)
-#     yield ‘]’ 
+def stream_as_json(generator_function):
+    """Helper generator to support streaming with flask"""
+    first = True
+    yield '['
+    for item in generator_function:
+        if not first:
+            yield ','
+        else:
+            first = False
+        yield json.dumps(item)
+    yield ']'
 
 @app.route('/source/ticket/all',methods=["GET"]) 
 def get_tickets():
@@ -65,20 +66,7 @@ def get_tickets():
             logger.debug(f"since value sent from sesam: {unix_time_update_date}")
         with requests.Session() as session:
             session.auth = ZEN_AUTH
-            check_items = True
-            ticket_list = list()
-            url = f'{ZENURL}/incremental/tickets.json?start_time={unix_time_update_date}'
-            # https://developer.zendesk.com/rest_api/docs/support/tickets#list-tickets
-            while check_items:
-                response = session.get(url, timeout=180)
-                data = response.json()
-                ticket_list = ticket_list + data['tickets']
-                url = data['next_page']
-                if data['count'] < 1000:  # pagination used for Zendesk incremental importing
-                    check_items = False
-            result = [dict(item, _updated=data['end_time'], _id=str(item['id'])) for item in
-                      ticket_list]
-            return Response(json.dumps(result), mimetype='application/json; charset=utf-8') #Rewrite to use stream_as_json
+            return Response(stream_as_json(get_items(session,unix_time_update_date)), mimetype='application/json; charset=utf-8') #Rewrite to use stream_as_json
             # return Response(stream_as_json(get_page(url)), mimetype=‘application/json’)
     except Timeout as e:
         logger.error(f"Timeout issue while fetching tickets {e}")
@@ -158,6 +146,27 @@ def new_ticket():
     except Exception as e:
         logger.error(f"Issue while updating ticket {ticketID} from Zendesk: {e}")
 
+
+def get_items(session,unix_time_update_date):
+    """Helper generator to support streaming with flask"""
+    url = f'{ZENURL}/incremental/tickets.json?start_time={unix_time_update_date}'
+        # https://developer.zendesk.com/rest_api/docs/support/tickets#list-tickets
+    check_items = True
+    ticket_list = list()
+    while check_items:
+        response = session.get(url, timeout=180)
+        data = response.json()
+        end_time = data["end_time"]
+        url = data['next_page']
+        logger.debug(f"Next page url: {url}")
+        # logger.debug(f"Data count: {data['count']}")
+        for item in data['tickets']:
+            logger.debug(f"item: {item}")
+            item["_id"] = str(item["id"])
+            item["_updated"] = end_time
+            yield item
+        if data['count'] < 1000:  # pagination used for Zendesk incremental importing. Next page will newer be none when using timestamp 
+            check_items = False
 
 if __name__ == "__main__":
     serve(app)
