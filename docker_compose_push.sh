@@ -1,7 +1,7 @@
 #!/bin/bash
 # git update-index --add --chmod=+x docker_compose_push.sh
-echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-docker-compose push
+# echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+# docker-compose push
 
 set -v
 set -e
@@ -20,7 +20,7 @@ then
   DOCKER_REPO_TAG="$TRAVIS_TAG"
 fi
 
-echo $GIT_REPO_OWNER
+echo Repo owner: $GIT_REPO_OWNER
 echo $DOCKER_REPO_OWNER/$REPO_NAME:$DOCKER_REPO_TAG
 
 # if [ -n "$DOCKER_REPO_TAG" ]
