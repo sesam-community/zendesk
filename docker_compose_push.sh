@@ -13,13 +13,7 @@ GIT_REPO_OWNER="${SLUG/%\/*/}"
 # DOCKER_REPO_OWNER=${GIT_REPO_OWNER/sesam-community/sesamcommunity}
 DOCKER_REPO_OWNER="$GIT_REPO_OWNER"
 
-if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]
-then
-  DOCKER_REPO_TAG="development"
-elif [ -n "$TRAVIS_TAG" ]
-then
-  DOCKER_REPO_TAG="$TRAVIS_TAG"
-fi
+DOCKER_REPO_TAG="development"
 
 if [ -n "$DOCKER_REPO_TAG" ]
 then
