@@ -13,7 +13,8 @@ python:
 services:
   - docker
 
-script: true
+script:
+  - bash docker_compose_push.sh
   # - docker-compose build
   # - docker-compose up -d
   # - docker wait zendesk-service-test
@@ -22,5 +23,5 @@ script: true
   
 
 after_success:
-  - bash docker_compose_push.sh
+  # - bash docker_compose_push.sh
 #   - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)
