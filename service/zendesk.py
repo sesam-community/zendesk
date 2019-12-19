@@ -101,6 +101,8 @@ def update_ticket():
             # Status should be 201 Created
             logger.info("Statuscode from Zendesk: "+str(response.status_code))
             result = response.json()
+            #insert id for Sesam
+            result['_id'] = result["id"]
             if not isinstance(result,list):
                 result = [result]
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
@@ -132,10 +134,11 @@ def new_ticket():
             # https://developer.zendesk.com/rest_api/docs/support/tickets#create-ticket
             if DEBUG: logger.debug("Input payload: "+str(ticket))
             response = session.post(url, json=ticket, timeout=180)
-            if DEBUG: logger.debug("Output payload: "+str(response.json()))
-            # Status should be 201 Created
-            logger.info("Statuscode from Zendesk: "+str(response.status_code))
             result = response.json()
+            if DEBUG: logger.debug("Output payload: "+str(result))
+            logger.info("Statuscode from Zendesk (should be 201 Created): "+str(response.status_code))
+            #insert id for Sesam
+            result['_id'] = result["ticket"]['id']
             if not isinstance(result,list):
                 result = [result]
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
@@ -152,7 +155,6 @@ def get_items(session,unix_time_update_date):
     url = f'{ZENURL}/incremental/tickets.json?start_time={unix_time_update_date}'
         # https://developer.zendesk.com/rest_api/docs/support/tickets#list-tickets
     check_items = True
-    ticket_list = list()
     while check_items:
         response = session.get(url, timeout=180)
         data = response.json()
