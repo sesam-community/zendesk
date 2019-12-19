@@ -97,14 +97,14 @@ def update_ticket():
             # https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket
             if DEBUG: logger.debug("Input payload: "+str(ticket))
             response = session.put(url, json=ticket, timeout=180)
-            if DEBUG: logger.debug("Output payload: "+str(response.json()))
+            result = response.json()
+            if DEBUG: logger.debug("Output payload: "+str(result))
             # Status should be 201 Created
             logger.info("Statuscode from Zendesk: "+str(response.status_code))
-            result = response.json()
             #insert id for Sesam
-            result['_id'] = result["id"]
-            if not isinstance(result,list):
+            if isinstance(result,dict):
                 result = [result]
+            result[0]['_id'] = result[0]['ticket']["id"]
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
@@ -139,8 +139,9 @@ def new_ticket():
             logger.info("Statuscode from Zendesk (should be 201 Created): "+str(response.status_code))
             #insert id for Sesam
             result['_id'] = result["ticket"]['id']
-            if not isinstance(result,list):
+            if isinstance(result,dict):
                 result = [result]
+            result[0]['_id'] = result[0]['ticket']["id"]
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
