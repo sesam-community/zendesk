@@ -79,6 +79,7 @@ def update_ticket():
     if request.is_json:
         ticket_list = request.get_json()
         logger.debug(type(ticket_list))
+        if DEBUG: logger.debug("Input payload: "+str(ticket_list))
     else:
         logger.error('Content type must be json and not:'+str(request.content_type))
         abort(415)
