@@ -8,6 +8,6 @@ __pycache__/
 .syncconfig
 dev-env.json
 ~$*.xlsx
-
+.ipynb_checkpoints
 
 service/mof_tmp.py
