@@ -44,7 +44,7 @@ else:
     logger.info(f"Using {ZENURL} for Zendesk-api-base-url")
 
 def stream_as_json(generator_function):
-    """Helper generator to support streaming with flask"""
+    """Helper generator to support streaming with flask to Sesam"""
     first = True
     yield '['
     for item in generator_function:
@@ -66,8 +66,7 @@ def get_tickets():
             logger.debug(f"since value sent from sesam: {unix_time_update_date}")
         with requests.Session() as session:
             session.auth = ZEN_AUTH
-            return Response(stream_as_json(get_items(session,unix_time_update_date)), mimetype='application/json; charset=utf-8') #Rewrite to use stream_as_json
-            # return Response(stream_as_json(get_page(url)), mimetype=‘application/json’)
+            return Response(stream_as_json(get_items(session,unix_time_update_date)), mimetype='application/json; charset=utf-8')
     except Timeout as e:
         logger.error(f"Timeout issue while fetching tickets {e}")
     except ConnectionError as e:
@@ -97,14 +96,14 @@ def update_ticket():
             # https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket
             if DEBUG: logger.debug("Input payload: "+str(ticket))
             response = session.put(url, json=ticket, timeout=180)
-            result = response.json()
-            if DEBUG: logger.debug("Output payload: "+str(result))
-            # Status should be 201 Created
             logger.info("Statuscode from Zendesk: "+str(response.status_code))
+            result = response.json()
+            # Status should be 201 Created
             #insert id for Sesam
             if isinstance(result,dict):
                 result = [result]
             result[0]['_id'] = result[0]['ticket']["id"]
+            if DEBUG: logger.debug("Output payload: "+str(result))
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
@@ -134,14 +133,13 @@ def new_ticket():
             # https://developer.zendesk.com/rest_api/docs/support/tickets#create-ticket
             if DEBUG: logger.debug("Input payload: "+str(ticket))
             response = session.post(url, json=ticket, timeout=180)
-            result = response.json()
-            if DEBUG: logger.debug("Output payload: "+str(result))
             logger.info("Statuscode from Zendesk (should be 201 Created): "+str(response.status_code))
+            result = response.json()
             #insert id for Sesam
-            result['_id'] = result["ticket"]['id']
             if isinstance(result,dict):
                 result = [result]
             result[0]['_id'] = result[0]['ticket']["id"]
+            if DEBUG: logger.debug("Output payload: "+str(result))
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
         logger.error(f"Timeout issue while updating ticket {ticketID}: {e}")
