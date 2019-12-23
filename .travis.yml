@@ -1,9 +1,8 @@
 sudo: required
 
-
 language: python
 python:
-  -  "3.5"
+  -  "3.7"
 
 services:
   - docker
@@ -11,4 +10,4 @@ services:
 script: true
 
 after_success:
-  - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)
+   - bash <(curl -s https://raw.githubusercontent.com/sesam-community/guidelines/master/after_success.sh)

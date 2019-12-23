@@ -1,11 +1,16 @@
-FROM python:3.6-slim
+FROM python:3-alpine
+RUN apk update&&\
+    apk add --no-cache tini
+
+RUN pip install --upgrade pip
+
+COPY ./service/requirements.txt /service/requirements.txt
+RUN pip install -r /service/requirements.txt
 
 COPY ./service /service
-WORKDIR /service
+WORKDIR /service/
 
-RUN pip install -r requirements.txt
+EXPOSE 5000
 
-EXPOSE 5000/tcp
-
-ENTRYPOINT ["python3"]
-CMD ["zendesk-service.py"]
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["python3", "zendesk.py"]

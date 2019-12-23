@@ -1,0 +1,30 @@
+version: '3'
+services:
+  zendesk-service:
+    build: .
+    image: mofsesam/zendesk-service:develop
+    ports:
+      - "5000:5000"
+    environment: &env
+      DEBUG: "True"
+#      DUMMY_URL: http://dummy-zen:5000  
+      LOG_LEVEL: "DEBUG"
+      USER: "user@test.net"
+      TOKEN: "something"
+      SUBDOMAIN: "sesam"
+  # dummy-zen:
+  #   image: mofsesam/norwegianblue:latest
+  #   ports:
+  #     - "5001:5000"
+  #   environment:
+  #     DEBUG: "True"
+  #     SUBDOMAIN: "sesam"
+  #     LOG_LEVEL: "DEBUG" 
+  # zendesk-service-test:
+  #   container_name: zendesk-service-test
+  #   image: mofsesam/zendesk-service:develop
+  #   depends_on:
+  #     - zendesk-service
+  #     - dummy-zen
+  #   environment: *env
+  #   command: ["/service/run_tests_tini.sh"]

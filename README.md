@@ -2,18 +2,19 @@
 
 ### A connector for zendesk's API. 
 
-It can be used to import  Tickets, Users, Groups...etc.
+It can be used to import Tickets, create new Tickets and update existing Tickets.
 
-**An example of system config**   
+#### An example of system config   
 ```
 {
-  "_id": "<Name of your system i.e zendesk>",
+  "_id": "<Name of your system i.e zendesk-ms>",
   "type": "system:microservice",
   "docker": {
     "environment": {
       "LOG_LEVEL": "INFO",
-      "token": "<Token to access zendesk (Visit https://<yourdomain>.zendesk.com/agent/admin/api/settings to get it)>",
-      "user": "your email-id of zendsek-login"
+      "SUBDOMAIN": "<Your subdomain at Zendesk>",
+      "TOKEN": "<Token to access zendesk (Visit https://<yourdomain>.zendesk.com/agent/admin/api/settings to get it)>",
+      "USER": "your email-id of zendsek-login"
     },
     "image": "sesamcommunity/zendesk:latest",
     "port": 5000
@@ -21,19 +22,20 @@ It can be used to import  Tickets, Users, Groups...etc.
   "verify_ssl": true
 }
 ```
+**For TOKEN you should use secrets in Sesam e.g. "$SECRET(token)"**
  
-**An example of input pipe config for incremental ticket import**  
+#### An example of input pipe config for incremental ticket import
    ```
    {
   "_id": "<Name of your pipe i.e zendesk-tickets>",
   "type": "pipe",
   "source": {
     "type": "json",
-    "system": "<name of your system>",
+    "system": "<Name of your system i.e zendesk-ms>",
     "is_chronological": true,
     "is_since_comparable": false,
     "supports_since": true,
-    "url": "/tickets"
+    "url": "/source/ticket/all"
   },
   "transform": {
     "type": "dtl",
@@ -44,27 +46,85 @@ It can be used to import  Tickets, Users, Groups...etc.
     }
   }
 }
-
 ```
+The connector is used as a source. It supports Since, so it will returne all tickets if no since value is used (first time in a input pipe or after a reset) or new/updated tickets since last called by pipe.
 
-**An example of input pipe config to import users, groups, requests....etc**  
-   ```
+Each ticket is returned with sesam _id set to the Zendesk ticket id.
+
+#### An example of pipe with transform to create a new ticket
+```
 {
-  "_id": "<Name of your pipe i.e zendesk-users>",
+  "_id": "<Name of your pipe i.e zendesk-new-ticket>",
   "type": "pipe",
   "source": {
-    "type": "json",
-    "system": "<name of your system>",
-    "url": "/items/<users or groups or  requests ...etc depending what kind of list, you want.>"
+    "type": "embedded",
+    "entities": [{
+      "_id": "<sesam id of ticket entitiy>",
+      "ticket": {
+        "comment": "Testing to Create Ticket with zendesk api from microservice in sesam with tag",
+        "priority": "C - Less serious",
+        "subject": "Testing new zendesk ticket from Sesam",
+        "tags": ["test"]
+      }
+    }]
   },
-  "transform": {
+  "transform": [{
+    "type": "http",
+    "system": "zendesk-ms",
+    "url": "/transform/ticket/new/"
+  }, {
     "type": "dtl",
     "rules": {
       "default": [
         ["copy", "*"]
       ]
     }
+  }],
+  "pump": {
+    "mode": "manual"
   }
 }
-
 ```
+The transform **must** get a ticket attribut that conforms to the standard defined by the Zendesk rest api.
+See https://developer.zendesk.com/rest_api/docs/support/tickets#create-ticket for details. For a new ticket **a comment is a requiered minimum**.
+
+The response from the Zendesk rest api is returned with sesam _id set to the Zendesk ticket id.
+
+#### An example of pipe with transform to update an existing ticket
+```
+{
+  "_id": "<pipe name eg. zendesk-update-ticket>",
+  "type": "pipe",
+  "source": {
+    "type": "embedded",
+    "entities": [{
+      "ticket": {
+        "comment": "Testing to Update Ticket with zendesk api from microservice in sesam with extra tag, test2",
+        "id": "<zendesk ticket id nr, e.g. id from new ticket example>",
+        "tags": ["test", "test2"]
+      }
+    }]
+  },
+  "transform": [{
+    "type": "http",
+    "system": "zendesk-ms",
+    "url": "/transform/ticket/update/"
+  }, {
+    "type": "dtl",
+    "rules": {
+      "default": [
+        ["copy", "*"]
+      ]
+    }
+  }],
+  "pump": {
+    "mode": "manual"
+  }
+}
+```
+The transform **must** get a ticket attribut that conforms to the standard defined by the Zendesk rest api.
+See https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket for details. To update a ticket a ticket **id** is requiered.
+
+The response from the Zendesk rest api is returned with sesam _id set to the Zendesk ticket id.
+
+**Adding or changing tags** for a ticket is an example of things you can use the update ticket transform for.

@@ -1,4 +1,13 @@
-*idea*
-*.zip
-*env*
-*venv*
+.vscode/settings.json
+__pycache__/
+*.py[cod]
+*.code-workspace
+.DS_STORE
+.idea
+*.*~
+.syncconfig
+dev-env.json
+~$*.xlsx
+.ipynb_checkpoints
+
+service/mof_tmp.py
