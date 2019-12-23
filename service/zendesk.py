@@ -102,7 +102,7 @@ def update_ticket():
             #insert id for Sesam
             if isinstance(result,dict):
                 result = [result]
-            result[0]['_id'] = result[0]['ticket']["id"]
+            result[0]['_id'] = str(result[0]['ticket']["id"])
             if DEBUG: logger.debug("Output payload: "+str(result))
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
@@ -138,7 +138,7 @@ def new_ticket():
             #insert id for Sesam
             if isinstance(result,dict):
                 result = [result]
-            result[0]['_id'] = result[0]['ticket']["id"]
+            result[0]['_id'] = str(result[0]['ticket']["id"])
             if DEBUG: logger.debug("Output payload: "+str(result))
             return Response(json.dumps(result), mimetype='application/json; charset=utf-8') 
     except Timeout as e:
