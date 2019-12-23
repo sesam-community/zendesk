@@ -123,7 +123,7 @@ The response from the Zendesk rest api is returned with sesam _id set to the Zen
 }
 ```
 The transform **must** get a ticket attribut that conforms to the standard defined by the Zendesk rest api.
-See https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket for details. To update a ticket an ticket **id** is requiered.
+See https://developer.zendesk.com/rest_api/docs/support/tickets#update-ticket for details. To update a ticket a ticket **id** is requiered.
 
 The response from the Zendesk rest api is returned with sesam _id set to the Zendesk ticket id.
 
